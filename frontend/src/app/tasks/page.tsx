@@ -3,18 +3,18 @@
 import { useEffect, useState } from "react";
 import {
   Layout, Menu, Typography, Table, Tag, Button, Space, Modal, Form,
-  Input, Select, message, Popconfirm,
+  Input, Select, message, Popconfirm, Empty, Row, Col,
 } from "antd";
 import {
   HomeOutlined, AppstoreOutlined, PlusOutlined, EditOutlined,
-  DeleteOutlined, EyeOutlined,
+  DeleteOutlined, EyeOutlined, SearchOutlined, ReloadOutlined,
 } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
-import axios from "axios";
+import { getTasks, createTask, updateTask, deleteTask, Task } from "@/lib/api";
 
 const { Header, Content } = Layout;
 const { Title } = Typography;
-const API_BASE = "http://127.0.0.1:5000/api";
+const { Search } = Input;
 
 const statusMap: Record<string, { color: string; text: string }> = {
   todo: { color: "default", text: "待办" },
@@ -24,51 +24,64 @@ const statusMap: Record<string, { color: string; text: string }> = {
 
 export default function TasksPage() {
   const router = useRouter();
-  const [tasks, setTasks] = useState([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<any>(null);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("");
   const [form] = Form.useForm();
 
   const fetchTasks = () => {
     setLoading(true);
-    axios
-      .get(`${API_BASE}/tasks`)
+    const params: { search?: string; status?: string } = {};
+    if (searchKeyword) params.search = searchKeyword;
+    if (statusFilter) params.status = statusFilter;
+    getTasks(params)
       .then((res) => setTasks(res.data.data || []))
       .catch(() => message.error("加载失败，请确认后端已启动"))
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchTasks(); }, []);
+  useEffect(() => { fetchTasks(); }, [searchKeyword, statusFilter]);
 
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
+      setSubmitting(true);
       if (editingTask) {
-        await axios.put(`${API_BASE}/tasks/${editingTask.id}`, values);
+        await updateTask(editingTask.id, values);
         message.success("更新成功");
       } else {
-        await axios.post(`${API_BASE}/tasks`, values);
+        await createTask(values);
         message.success("创建成功");
       }
       setModalOpen(false);
       form.resetFields();
       setEditingTask(null);
       fetchTasks();
-    } catch {
-      // validation failed
+    } catch (err: any) {
+      if (err?.errorFields) return;
+      message.error("操作失败");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleDelete = async (id: number) => {
-    await axios.delete(`${API_BASE}/tasks/${id}`);
-    message.success("删除成功");
-    fetchTasks();
+    try {
+      await deleteTask(id);
+      message.success("删除成功");
+      fetchTasks();
+    } catch {
+      message.error("删除失败");
+    }
   };
 
   const columns = [
     { title: "ID", dataIndex: "id", width: 60 },
-    { title: "标题", dataIndex: "title" },
+    { title: "标题", dataIndex: "title", ellipsis: true },
     {
       title: "状态", dataIndex: "status", width: 100,
       render: (s: string) => (
@@ -80,8 +93,8 @@ export default function TasksPage() {
       render: (t: string) => new Date(t).toLocaleString("zh-CN"),
     },
     {
-      title: "操作", width: 220,
-      render: (_: any, record: any) => (
+      title: "操作", width: 240,
+      render: (_: any, record: Task) => (
         <Space>
           <Button size="small" icon={<EyeOutlined />}
             onClick={() => router.push(`/tasks/${record.id}`)}>详情</Button>
@@ -107,20 +120,67 @@ export default function TasksPage() {
           ]} />
       </Header>
       <Content style={{ padding: 40 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 24 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
           <Title level={2} style={{ margin: 0 }}>📝 任务列表</Title>
           <Button type="primary" icon={<PlusOutlined />}
             onClick={() => { setEditingTask(null); form.resetFields(); setModalOpen(true); }}>新建任务</Button>
         </div>
-        <Table dataSource={tasks} columns={columns} rowKey="id" loading={loading} />
-        <Modal title={editingTask ? "编辑任务" : "新建任务"} open={modalOpen}
-          onOk={handleSubmit} onCancel={() => { setModalOpen(false); setEditingTask(null); }}>
-          <Form form={form} layout="vertical">
-            <Form.Item name="title" label="标题" rules={[{ required: true, message: "请输入标题" }]}>
+
+        <Row gutter={16} style={{ marginBottom: 16 }}>
+          <Col span={12}>
+            <Search
+              placeholder="搜索任务标题..."
+              allowClear
+              enterButton={<><SearchOutlined /> 搜索</>}
+              onSearch={(value) => setSearchKeyword(value)}
+              onChange={(e) => { if (!e.target.value) setSearchKeyword(""); }}
+            />
+          </Col>
+          <Col span={6}>
+            <Select
+              placeholder="筛选状态"
+              allowClear
+              style={{ width: "100%" }}
+              value={statusFilter || undefined}
+              onChange={(value) => setStatusFilter(value || "")}
+              options={[
+                { value: "todo", label: "待办" },
+                { value: "doing", label: "进行中" },
+                { value: "done", label: "已完成" },
+              ]}
+            />
+          </Col>
+          <Col span={6}>
+            <Button icon={<ReloadOutlined />} onClick={fetchTasks}>刷新</Button>
+          </Col>
+        </Row>
+
+        <Table
+          dataSource={tasks}
+          columns={columns}
+          rowKey="id"
+          loading={loading}
+          locale={{ emptyText: <Empty description="暂无任务，点击右上角新建一个吧" /> }}
+          pagination={{ pageSize: 10, showTotal: (total) => `共 ${total} 条` }}
+        />
+
+        <Modal
+          title={editingTask ? "编辑任务" : "新建任务"}
+          open={modalOpen}
+          onOk={handleSubmit}
+          confirmLoading={submitting}
+          onCancel={() => { setModalOpen(false); setEditingTask(null); form.resetFields(); }}
+          destroyOnClose
+        >
+          <Form form={form} layout="vertical" preserve={false}>
+            <Form.Item name="title" label="标题" rules={[
+              { required: true, message: "请输入标题" },
+              { max: 100, message: "标题不能超过100字" },
+            ]}>
               <Input placeholder="请输入任务标题" />
             </Form.Item>
             <Form.Item name="description" label="描述">
-              <Input.TextArea rows={3} placeholder="请输入任务描述" />
+              <Input.TextArea rows={3} placeholder="请输入任务描述（选填）" maxLength={500} showCount />
             </Form.Item>
             <Form.Item name="status" label="状态" initialValue="todo">
               <Select>

@@ -3,5 +3,6 @@ venv/
 __pycache__/
 *.db
 .env
+.env.local
 .next/
 *.pyc

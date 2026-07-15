@@ -33,7 +33,14 @@ with app.app_context():
 
 @app.route('/api/tasks', methods=['GET'])
 def get_tasks():
-    tasks = Task.query.order_by(Task.created_at.desc()).all()
+    query = Task.query
+    search = request.args.get('search', '')
+    status = request.args.get('status', '')
+    if search:
+        query = query.filter(Task.title.contains(search))
+    if status:
+        query = query.filter(Task.status == status)
+    tasks = query.order_by(Task.created_at.desc()).all()
     return jsonify({
         'code': 200,
         'data': [task.to_dict() for task in tasks],

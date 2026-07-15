@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Layout, Menu, Typography, Card, Descriptions, Tag, Button, Spin } from "antd";
+import { Layout, Menu, Typography, Card, Descriptions, Tag, Button, Spin, Result } from "antd";
 import { HomeOutlined, AppstoreOutlined, ArrowLeftOutlined } from "@ant-design/icons";
 import { useRouter, useParams } from "next/navigation";
-import axios from "axios";
+import { getTask, Task } from "@/lib/api";
 
 const { Header, Content } = Layout;
 const { Title } = Typography;
-const API_BASE = "http://127.0.0.1:5000/api";
 
 const statusMap: Record<string, { color: string; text: string }> = {
   todo: { color: "default", text: "待办" },
@@ -19,14 +18,16 @@ const statusMap: Record<string, { color: string; text: string }> = {
 export default function TaskDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const [task, setTask] = useState<any>(null);
+  const [task, setTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
-    axios
-      .get(`${API_BASE}/tasks/${params.id}`)
+    setLoading(true);
+    setError(false);
+    getTask(Number(params.id))
       .then((res) => setTask(res.data.data))
-      .catch(() => setTask(null))
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [params.id]);
 
@@ -46,6 +47,13 @@ export default function TaskDetailPage() {
           style={{ marginBottom: 24 }}>返回列表</Button>
         {loading ? (
           <Spin size="large" />
+        ) : error ? (
+          <Result
+            status="404"
+            title="任务不存在"
+            subTitle="请检查任务 ID 是否正确"
+            extra={<Button type="primary" onClick={() => router.push("/tasks")}>返回列表</Button>}
+          />
         ) : task ? (
           <Card>
             <Title level={2}>{task.title}</Title>
@@ -62,9 +70,7 @@ export default function TaskDetailPage() {
               </Descriptions.Item>
             </Descriptions>
           </Card>
-        ) : (
-          <Card>任务不存在或加载失败</Card>
-        )}
+        ) : null}
       </Content>
     </Layout>
   );
