@@ -15,6 +15,12 @@ const statusMap: Record<string, { color: string; text: string }> = {
   done: { color: "success", text: "已完成" },
 };
 
+const priorityMap: Record<string, { color: string; text: string }> = {
+  high: { color: "red", text: "高" },
+  medium: { color: "orange", text: "中" },
+  low: { color: "blue", text: "低" },
+};
+
 export default function TaskDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -60,6 +66,9 @@ export default function TaskDetailPage() {
             <Descriptions column={1} bordered style={{ marginTop: 24 }}>
               <Descriptions.Item label="状态">
                 <Tag color={statusMap[task.status]?.color}>{statusMap[task.status]?.text}</Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="优先级">
+                <Tag color={priorityMap[task.priority]?.color}>{priorityMap[task.priority]?.text}</Tag>
               </Descriptions.Item>
               <Descriptions.Item label="描述">{task.description || "暂无描述"}</Descriptions.Item>
               <Descriptions.Item label="创建时间">

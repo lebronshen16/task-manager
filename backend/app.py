@@ -1,7 +1,12 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+beijing_tz = timezone(timedelta(hours=8))
+
+def now_beijing():
+    return datetime.now(beijing_tz).replace(tzinfo=None)
 
 app = Flask(__name__)
 CORS(app)
@@ -15,8 +20,9 @@ class Task(db.Model):
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, default='')
     status = db.Column(db.String(20), default='todo')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    priority = db.Column(db.String(10), default='medium')
+    created_at = db.Column(db.DateTime, default=now_beijing)
+    updated_at = db.Column(db.DateTime, default=now_beijing, onupdate=now_beijing)
 
     def to_dict(self):
         return {
@@ -24,6 +30,7 @@ class Task(db.Model):
             'title': self.title,
             'description': self.description,
             'status': self.status,
+            'priority': self.priority,
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
         }
@@ -36,10 +43,13 @@ def get_tasks():
     query = Task.query
     search = request.args.get('search', '')
     status = request.args.get('status', '')
+    priority = request.args.get('priority', '')
     if search:
         query = query.filter(Task.title.contains(search))
     if status:
         query = query.filter(Task.status == status)
+    if priority:
+        query = query.filter(Task.priority == priority)
     tasks = query.order_by(Task.created_at.desc()).all()
     return jsonify({
         'code': 200,
@@ -62,7 +72,8 @@ def create_task():
     task = Task(
         title=data['title'],
         description=data.get('description', ''),
-        status=data.get('status', 'todo')
+        status=data.get('status', 'todo'),
+        priority=data.get('priority', 'medium')
     )
     db.session.add(task)
     db.session.commit()
@@ -80,6 +91,8 @@ def update_task(task_id):
         task.description = data['description']
     if data.get('status'):
         task.status = data['status']
+    if data.get('priority'):
+        task.priority = data['priority']
     db.session.commit()
     return jsonify({'code': 200, 'data': task.to_dict(), 'message': '更新成功'})
 

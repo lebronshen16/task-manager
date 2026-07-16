@@ -9,6 +9,9 @@ import {
   HomeOutlined,
   AppstoreOutlined,
   ArrowRightOutlined,
+  ArrowUpOutlined,
+  MinusOutlined,
+  ArrowDownOutlined,
 } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import { getTasks, Task } from "@/lib/api";
@@ -22,11 +25,17 @@ const statusMap: Record<string, { color: string; text: string }> = {
   done: { color: "success", text: "已完成" },
 };
 
+const priorityMap: Record<string, { color: string; text: string }> = {
+  high: { color: "red", text: "高" },
+  medium: { color: "orange", text: "中" },
+  low: { color: "blue", text: "低" },
+};
+
 export default function HomePage() {
   const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ total: 0, todo: 0, doing: 0, done: 0 });
+  const [stats, setStats] = useState({ total: 0, todo: 0, doing: 0, done: 0, high: 0, medium: 0, low: 0 });
 
   useEffect(() => {
     setLoading(true);
@@ -38,9 +47,12 @@ export default function HomePage() {
         todo: data.filter((t: Task) => t.status === "todo").length,
         doing: data.filter((t: Task) => t.status === "doing").length,
         done: data.filter((t: Task) => t.status === "done").length,
+        high: data.filter((t: Task) => t.priority === "high").length,
+        medium: data.filter((t: Task) => t.priority === "medium").length,
+        low: data.filter((t: Task) => t.priority === "low").length,
       });
     }).catch(() => {
-      setStats({ total: 0, todo: 0, doing: 0, done: 0 });
+      setStats({ total: 0, todo: 0, doing: 0, done: 0, high: 0, medium: 0, low: 0 });
     }).finally(() => setLoading(false));
   }, []);
 
@@ -109,6 +121,39 @@ export default function HomePage() {
           </Row>
         </Spin>
 
+        <Row gutter={24} style={{ marginTop: 24 }}>
+          <Col xs={12} sm={6}>
+            <Card>
+              <Statistic
+                title="高优先级"
+                value={stats.high}
+                prefix={<ArrowUpOutlined />}
+                valueStyle={{ color: "#ff4d4f" }}
+              />
+            </Card>
+          </Col>
+          <Col xs={12} sm={6}>
+            <Card>
+              <Statistic
+                title="中优先级"
+                value={stats.medium}
+                prefix={<MinusOutlined />}
+                valueStyle={{ color: "#fa8c16" }}
+              />
+            </Card>
+          </Col>
+          <Col xs={12} sm={6}>
+            <Card>
+              <Statistic
+                title="低优先级"
+                value={stats.low}
+                prefix={<ArrowDownOutlined />}
+                valueStyle={{ color: "#1677ff" }}
+              />
+            </Card>
+          </Col>
+        </Row>
+
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 48, marginBottom: 16 }}>
           <Title level={3} style={{ margin: 0 }}>📌 最近任务</Title>
           <Button type="link" icon={<ArrowRightOutlined />} onClick={() => router.push("/tasks")}>
@@ -121,7 +166,7 @@ export default function HomePage() {
           locale={{ emptyText: "暂无任务，去任务列表创建一个吧" }}
           renderItem={(item: Task) => (
             <List.Item
-              extra={<Tag color={statusMap[item.status]?.color}>{statusMap[item.status]?.text}</Tag>}
+              extra={<><Tag color={priorityMap[item.priority]?.color}>{priorityMap[item.priority]?.text}</Tag> <Tag color={statusMap[item.status]?.color}>{statusMap[item.status]?.text}</Tag></>}
               style={{ cursor: "pointer" }}
               onClick={() => router.push(`/tasks/${item.id}`)}
             >

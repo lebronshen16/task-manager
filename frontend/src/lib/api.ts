@@ -10,6 +10,7 @@ export interface Task {
   title: string;
   description: string;
   status: "todo" | "doing" | "done";
+  priority: "high" | "medium" | "low";
   created_at: string;
   updated_at: string;
 }
@@ -21,7 +22,7 @@ export interface ApiResponse<T> {
   message?: string;
 }
 
-export const getTasks = (params?: { search?: string; status?: string }) =>
+export const getTasks = (params?: { search?: string; status?: string; priority?: string }) =>
   api.get<ApiResponse<Task[]>>("/tasks", { params });
 
 export const getTask = (id: number) =>

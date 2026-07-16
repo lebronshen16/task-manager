@@ -22,6 +22,12 @@ const statusMap: Record<string, { color: string; text: string }> = {
   done: { color: "success", text: "已完成" },
 };
 
+const priorityMap: Record<string, { color: string; text: string }> = {
+  high: { color: "red", text: "高" },
+  medium: { color: "orange", text: "中" },
+  low: { color: "blue", text: "低" },
+};
+
 export default function TasksPage() {
   const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -31,20 +37,22 @@ export default function TasksPage() {
   const [submitting, setSubmitting] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [priorityFilter, setPriorityFilter] = useState<string>("");
   const [form] = Form.useForm();
 
   const fetchTasks = () => {
     setLoading(true);
-    const params: { search?: string; status?: string } = {};
+    const params: { search?: string; status?: string; priority?: string } = {};
     if (searchKeyword) params.search = searchKeyword;
     if (statusFilter) params.status = statusFilter;
+    if (priorityFilter) params.priority = priorityFilter;
     getTasks(params)
       .then((res) => setTasks(res.data.data || []))
       .catch(() => message.error("加载失败，请确认后端已启动"))
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchTasks(); }, [searchKeyword, statusFilter]);
+  useEffect(() => { fetchTasks(); }, [searchKeyword, statusFilter, priorityFilter]);
 
   const handleSubmit = async () => {
     try {
@@ -89,6 +97,12 @@ export default function TasksPage() {
       ),
     },
     {
+      title: "优先级", dataIndex: "priority", width: 80,
+      render: (p: string) => (
+        <Tag color={priorityMap[p]?.color}>{priorityMap[p]?.text}</Tag>
+      ),
+    },
+    {
       title: "创建时间", dataIndex: "created_at", width: 180,
       render: (t: string) => new Date(t).toLocaleString("zh-CN"),
     },
@@ -127,7 +141,7 @@ export default function TasksPage() {
         </div>
 
         <Row gutter={16} style={{ marginBottom: 16 }}>
-          <Col span={12}>
+          <Col xs={24} sm={8}>
             <Search
               placeholder="搜索任务标题..."
               allowClear
@@ -136,7 +150,7 @@ export default function TasksPage() {
               onChange={(e) => { if (!e.target.value) setSearchKeyword(""); }}
             />
           </Col>
-          <Col span={6}>
+          <Col xs={12} sm={5}>
             <Select
               placeholder="筛选状态"
               allowClear
@@ -150,7 +164,21 @@ export default function TasksPage() {
               ]}
             />
           </Col>
-          <Col span={6}>
+          <Col xs={12} sm={5}>
+            <Select
+              placeholder="筛选优先级"
+              allowClear
+              style={{ width: "100%" }}
+              value={priorityFilter || undefined}
+              onChange={(value) => setPriorityFilter(value || "")}
+              options={[
+                { value: "high", label: "高" },
+                { value: "medium", label: "中" },
+                { value: "low", label: "低" },
+              ]}
+            />
+          </Col>
+          <Col xs={24} sm={6}>
             <Button icon={<ReloadOutlined />} onClick={fetchTasks}>刷新</Button>
           </Col>
         </Row>
@@ -187,6 +215,13 @@ export default function TasksPage() {
                 <Select.Option value="todo">待办</Select.Option>
                 <Select.Option value="doing">进行中</Select.Option>
                 <Select.Option value="done">已完成</Select.Option>
+              </Select>
+            </Form.Item>
+            <Form.Item name="priority" label="优先级" initialValue="medium">
+              <Select>
+                <Select.Option value="high">🔴 高</Select.Option>
+                <Select.Option value="medium">🟠 中</Select.Option>
+                <Select.Option value="low">🔵 低</Select.Option>
               </Select>
             </Form.Item>
           </Form>
