@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, Row, Col, Statistic, Layout, Menu, Typography, Spin, List, Tag, Button } from "antd";
+import { Card, Row, Col, Statistic, Layout, Menu, Typography, Spin, List, Tag, Button, Progress } from "antd";
 import {
   CheckCircleOutlined,
   UnorderedListOutlined,
@@ -153,6 +153,23 @@ export default function HomePage() {
             </Card>
           </Col>
         </Row>
+
+        <Card style={{ marginTop: 24 }}>
+          <Title level={4} style={{ marginBottom: 16 }}>📈 完成进度</Title>
+          <Progress
+            percent={stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0}
+            status={stats.total > 0 && stats.done === stats.total ? "success" : "active"}
+            strokeColor={{
+              "0%": "#1677ff",
+              "100%": "#52c41a",
+            }}
+          />
+          <Text type="secondary">
+            {stats.total > 0
+              ? `已完成 ${stats.done} / ${stats.total} 个任务`
+              : "还没有任务，去创建一个吧"}
+          </Text>
+        </Card>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 48, marginBottom: 16 }}>
           <Title level={3} style={{ margin: 0 }}>📌 最近任务</Title>
