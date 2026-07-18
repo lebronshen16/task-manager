@@ -8,7 +8,7 @@ app = Flask(__name__)
 CORS(app)
 
 TZ = timezone(timedelta(hours=8))
-DATA_FILE = '/tmp/tasks.json'
+DATA_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tasks.json')
 
 
 def load_tasks():
@@ -110,3 +110,7 @@ def delete_task(task_id):
 @app.route('/')
 def home():
     return jsonify({'code': 200, 'message': 'Task Manager API is running'})
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
