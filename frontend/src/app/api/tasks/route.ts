@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
+import os from 'os';
+import path from 'path';
 
 export const runtime = 'nodejs';
 
-const DATA_FILE = '/tmp/tasks.json';
+const DATA_FILE = path.join(os.tmpdir(), 'tasks.json');
 
 interface Task {
   id: number;
