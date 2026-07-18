@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE || "/api",
+  baseURL: process.env.NEXT_PUBLIC_API_BASE || "https://task-manager-fq4n.vercel.app/api",
   timeout: 10000,
 });
 
